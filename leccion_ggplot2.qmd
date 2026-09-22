@@ -1,0 +1,528 @@
+---
+title: "Visualización de datos con ggplot2"
+subtitle: "Lección práctica (60 minutos)"
+author: "Informática"
+date: today
+date-format: "DD/MM/YYYY"
+lang: es
+format:
+  html:
+    toc: true
+    toc-location: left
+    number-sections: true
+    theme: flatly
+    highlight-style: tango
+    code-copy: true
+    fig-width: 7
+    fig-height: 4.5
+    fig-align: center
+    embed-resources: true
+execute:
+  echo: true
+  message: false
+  warning: false
+params:
+  soluciones: false   # Cambia a true (o usa -P soluciones:true) para la versión con soluciones
+---
+
+# Plan de la sesión {.unnumbered}
+
+| Tiempo      | Actividad                                                   |
+|-------------|-------------------------------------------------------------|
+| 0 – 5 min   | Preparación e idea de la "gramática de gráficos"            |
+| 5 – 15 min  | Primer gráfico: `ggplot()`, `aes()` y `geom_point()`        |
+| 15 – 25 min | Estéticas: color, forma y tamaño · **Ejercicio 1**          |
+| 25 – 37 min | Otros geoms: histograma, boxplot y barras · **Ejercicio 2** |
+| 37 – 47 min | Etiquetas, temas y facetas · **Ejercicio 3**                |
+| 47 – 57 min | **Ejercicio integrador**                                    |
+| 57 – 60 min | Guardar gráficos con `ggsave()` y cierre                    |
+
+::: {.callout-note}
+## Objetivo
+Al terminar, podrás construir, personalizar y guardar gráficos con `ggplot2`
+a partir de un data frame.
+
+**Requisitos previos:** manejo de objetos, vectores y data frames en R.
+:::
+
+# Preparación (0 – 5 min)
+
+Instala los paquetes **solo la primera vez** (quita el `#` para ejecutar):
+
+```{r}
+#| label: instalar
+#| eval: false
+# install.packages("ggplot2")
+# install.packages("palmerpenguins")
+```
+
+Carga los paquetes y los datos:
+
+```{r}
+#| label: cargar
+library(ggplot2)
+library(palmerpenguins)
+
+# Eliminamos las filas con datos faltantes para simplificar
+pinguinos <- na.omit(penguins)
+
+head(pinguinos)
+str(pinguinos)
+```
+
+Los datos contienen mediciones de **333 pingüinos** de tres especies
+(*Adelie*, *Chinstrap* y *Gentoo*) en tres islas del archipiélago Palmer,
+Antártida.
+
+| Variable            | Descripción               |
+|---------------------|---------------------------|
+| `species`           | Especie                   |
+| `island`            | Isla                      |
+| `bill_length_mm`    | Longitud del pico (mm)    |
+| `bill_depth_mm`     | Profundidad del pico (mm) |
+| `flipper_length_mm` | Longitud de la aleta (mm) |
+| `body_mass_g`       | Masa corporal (g)         |
+| `sex`               | Sexo                      |
+| `year`              | Año de muestreo           |
+
+## La gramática de gráficos
+
+Todo gráfico de `ggplot2` se construye **por capas** con la misma estructura:
+
+```{r}
+#| label: plantilla
+#| eval: false
+ggplot(data = <DATOS>, mapping = aes(<MAPEOS>)) +
+  <GEOM_FUNCIÓN>() +
+  <OTRAS CAPAS>
+```
+
+- **Datos**: el data frame.
+- **Estéticas (`aes`)**: qué variable va en el eje x, eje y, color, forma...
+- **Geometrías (`geom_*`)**: cómo se dibujan los datos (puntos, barras, líneas...).
+- Las capas se suman con **`+`**.
+
+# Primer gráfico (5 – 15 min)
+
+## Paso a paso
+
+Solo los datos: un lienzo vacío.
+
+```{r}
+#| label: paso1
+ggplot(data = pinguinos)
+```
+
+Agregamos los ejes con `aes()`:
+
+```{r}
+#| label: paso2
+ggplot(data = pinguinos, mapping = aes(x = flipper_length_mm, y = body_mass_g))
+```
+
+Agregamos una geometría: puntos.
+
+```{r}
+#| label: paso3
+ggplot(data = pinguinos, mapping = aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point()
+```
+
+::: {.callout-tip}
+## Pregunta
+¿Qué relación observas entre la longitud de la aleta y la masa corporal?
+:::
+
+## Forma abreviada
+
+Es común omitir los nombres `data =` y `mapping =`:
+
+```{r}
+#| label: abreviado
+ggplot(pinguinos, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point()
+```
+
+## Agregar una línea de tendencia
+
+Las capas se apilan. `geom_smooth(method = "lm")` agrega una recta de regresión:
+
+```{r}
+#| label: tendencia
+ggplot(pinguinos, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+# Estéticas: color, forma y tamaño (15 – 25 min)
+
+## Mapear una variable a una estética
+
+Si la estética va **dentro** de `aes()`, depende de una variable:
+
+```{r}
+#| label: color-mapeado
+ggplot(pinguinos, aes(x = flipper_length_mm, y = body_mass_g, color = species)) +
+  geom_point()
+```
+
+Podemos combinar varias estéticas:
+
+```{r}
+#| label: forma
+ggplot(pinguinos, aes(x = flipper_length_mm, y = body_mass_g,
+                      color = species, shape = sex)) +
+  geom_point(size = 2)
+```
+
+## Fijar una estética
+
+Si la estética va **fuera** de `aes()` (dentro del `geom`), se aplica igual a
+todos los puntos:
+
+```{r}
+#| label: color-fijo
+ggplot(pinguinos, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point(color = "darkorange", size = 3, alpha = 0.5)
+```
+
+::: {.callout-note}
+`alpha` controla la transparencia (0 = invisible, 1 = opaco). Es útil cuando
+hay muchos puntos encimados.
+:::
+
+## Error común
+
+```{r}
+#| label: error-comun
+# ¿Por qué los puntos NO salen azules?
+ggplot(pinguinos, aes(x = flipper_length_mm, y = body_mass_g, color = "blue")) +
+  geom_point()
+```
+
+::: {.callout-warning}
+Dentro de `aes()`, `"blue"` se interpreta como una *categoría* llamada "blue",
+no como un color. El color fijo debe ir dentro de `geom_point()`.
+:::
+
+## Ejercicio 1 (≈ 5 min)
+
+::: {.callout-important icon=false}
+## Ejercicio 1
+Crea un diagrama de dispersión con la **longitud del pico** (`bill_length_mm`)
+en el eje x y la **profundidad del pico** (`bill_depth_mm`) en el eje y.
+
+a. Colorea los puntos por **especie**.
+b. Usa una forma distinta según la **isla**.
+c. Haz los puntos de tamaño 3 y con transparencia de 0.7.
+:::
+
+```{r}
+#| label: ej1
+#| eval: false
+ggplot(pinguinos, aes(x = ___, y = ___, color = ___, shape = ___)) +
+  geom_point(size = ___, alpha = ___)
+```
+
+```{r}
+#| label: sol1
+#| include: !expr params$soluciones
+# SOLUCIÓN
+ggplot(pinguinos, aes(x = bill_length_mm, y = bill_depth_mm,
+                      color = species, shape = island)) +
+  geom_point(size = 3, alpha = 0.7)
+```
+
+# Otras geometrías (25 – 37 min)
+
+El tipo de gráfico depende del **tipo de variable**:
+
+| Pregunta                                   | Variables                 | Geom                                  |
+|--------------------------------------------|---------------------------|---------------------------------------|
+| ¿Cómo se distribuye una variable numérica? | 1 numérica                | `geom_histogram()`, `geom_density()`  |
+| ¿Cómo se compara entre grupos?             | 1 categórica + 1 numérica | `geom_boxplot()`, `geom_violin()`     |
+| ¿Cuántos hay en cada categoría?            | 1 categórica              | `geom_bar()`                          |
+| ¿Cómo se relacionan dos variables?         | 2 numéricas               | `geom_point()`                        |
+
+## Histograma
+
+```{r}
+#| label: histograma
+ggplot(pinguinos, aes(x = body_mass_g)) +
+  geom_histogram(binwidth = 200, fill = "steelblue", color = "white")
+```
+
+Por especie (usamos `fill` para el relleno):
+
+```{r}
+#| label: histograma-especie
+ggplot(pinguinos, aes(x = body_mass_g, fill = species)) +
+  geom_histogram(binwidth = 200, alpha = 0.6, position = "identity")
+```
+
+## Densidad
+
+```{r}
+#| label: densidad
+ggplot(pinguinos, aes(x = body_mass_g, fill = species)) +
+  geom_density(alpha = 0.5)
+```
+
+## Diagrama de caja (boxplot)
+
+```{r}
+#| label: boxplot
+ggplot(pinguinos, aes(x = species, y = body_mass_g, fill = species)) +
+  geom_boxplot()
+```
+
+Combinando capas: cajas + puntos individuales con `geom_jitter()`.
+
+```{r}
+#| label: boxplot-jitter
+ggplot(pinguinos, aes(x = species, y = body_mass_g)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(aes(color = species), width = 0.2, alpha = 0.5)
+```
+
+## Gráfico de barras
+
+`geom_bar()` **cuenta** automáticamente las observaciones de cada categoría:
+
+```{r}
+#| label: barras
+ggplot(pinguinos, aes(x = island)) +
+  geom_bar()
+```
+
+Barras apiladas y agrupadas por especie:
+
+```{r}
+#| label: barras-especie
+#| layout-ncol: 2
+ggplot(pinguinos, aes(x = island, fill = species)) +
+  geom_bar()                       # apiladas (por defecto)
+
+ggplot(pinguinos, aes(x = island, fill = species)) +
+  geom_bar(position = "dodge")     # una al lado de la otra
+```
+
+::: {.callout-tip}
+## Pregunta
+¿Qué especie se encuentra en las tres islas?
+:::
+
+## Ejercicio 2 (≈ 5 min)
+
+::: {.callout-important icon=false}
+## Ejercicio 2
+a. Haz un **boxplot** de la longitud de la aleta (`flipper_length_mm`) por
+   **especie**, con el relleno según el **sexo**.
+b. Haz un **gráfico de barras** del número de pingüinos por **especie**, con
+   las barras rellenas según el **sexo** y colocadas una al lado de la otra.
+:::
+
+```{r}
+#| label: ej2
+#| eval: false
+# a)
+ggplot(pinguinos, aes(x = ___, y = ___, fill = ___)) +
+  geom_____()
+
+# b)
+ggplot(pinguinos, aes(x = ___, fill = ___)) +
+  geom_bar(position = ___)
+```
+
+```{r}
+#| label: sol2
+#| include: !expr params$soluciones
+# SOLUCIÓN a)
+ggplot(pinguinos, aes(x = species, y = flipper_length_mm, fill = sex)) +
+  geom_boxplot()
+
+# SOLUCIÓN b)
+ggplot(pinguinos, aes(x = species, fill = sex)) +
+  geom_bar(position = "dodge")
+```
+
+# Etiquetas, temas y facetas (37 – 47 min)
+
+## Etiquetas con `labs()`
+
+```{r}
+#| label: etiquetas
+ggplot(pinguinos, aes(x = flipper_length_mm, y = body_mass_g, color = species)) +
+  geom_point() +
+  labs(
+    title    = "Relación entre aleta y masa corporal",
+    subtitle = "Pingüinos del archipiélago Palmer",
+    x        = "Longitud de la aleta (mm)",
+    y        = "Masa corporal (g)",
+    color    = "Especie",
+    caption  = "Fuente: paquete palmerpenguins"
+  )
+```
+
+## Temas
+
+Los temas cambian la apariencia general (fondo, cuadrícula, tipografía):
+
+```{r}
+#| label: temas
+g <- ggplot(pinguinos, aes(x = flipper_length_mm, y = body_mass_g, color = species)) +
+  geom_point() +
+  labs(x = "Longitud de la aleta (mm)", y = "Masa corporal (g)", color = "Especie")
+
+g + theme_minimal()
+g + theme_classic()
+g + theme_bw(base_size = 14) + theme(legend.position = "bottom")
+```
+
+::: {.callout-note}
+Un gráfico se puede **guardar en un objeto** (`g`) y luego agregarle capas.
+:::
+
+## Colores manuales
+
+```{r}
+#| label: colores
+g + scale_color_manual(values = c("Adelie"    = "darkorange",
+                                  "Chinstrap" = "purple",
+                                  "Gentoo"    = "cyan4")) +
+  theme_minimal()
+```
+
+## Facetas
+
+Las facetas dividen el gráfico en paneles según una variable categórica:
+
+```{r}
+#| label: facet-wrap
+g + facet_wrap(~ island)
+```
+
+Con dos variables se usa `facet_grid(filas ~ columnas)`:
+
+```{r}
+#| label: facet-grid
+#| fig-height: 5
+g + facet_grid(sex ~ island)
+```
+
+## Ejercicio 3 (≈ 5 min)
+
+::: {.callout-important icon=false}
+## Ejercicio 3
+Partiendo del boxplot del ejercicio 2a:
+
+a. Agrega un título y cambia los nombres de los ejes y de la leyenda al español.
+b. Aplica `theme_minimal()`.
+c. Divide el gráfico en paneles por **isla** con `facet_wrap()`.
+:::
+
+```{r}
+#| label: ej3
+#| eval: false
+ggplot(pinguinos, aes(x = species, y = flipper_length_mm, fill = sex)) +
+  geom_boxplot() +
+  labs(title = ___, x = ___, y = ___, fill = ___) +
+  theme_____() +
+  facet_wrap(~ ___)
+```
+
+```{r}
+#| label: sol3
+#| include: !expr params$soluciones
+# SOLUCIÓN
+ggplot(pinguinos, aes(x = species, y = flipper_length_mm, fill = sex)) +
+  geom_boxplot() +
+  labs(title = "Longitud de la aleta por especie y sexo",
+       x = "Especie", y = "Longitud de la aleta (mm)", fill = "Sexo") +
+  theme_minimal() +
+  facet_wrap(~ island)
+```
+
+# Ejercicio integrador (47 – 57 min)
+
+::: {.callout-important icon=false}
+## Ejercicio integrador
+Construye un gráfico que cumpla con lo siguiente:
+
+1. Eje x: longitud del pico; eje y: profundidad del pico.
+2. Puntos coloreados por especie, tamaño 2 y transparencia 0.6.
+3. Una recta de regresión **por especie** (`geom_smooth(method = "lm", se = FALSE)`).
+4. Paneles separados por **sexo**.
+5. Título, ejes y leyenda en español.
+6. Un tema de tu elección con la leyenda en la parte inferior.
+:::
+
+::: {.callout-tip}
+## Pregunta de reflexión
+Si ignoras la especie, ¿la relación entre la longitud y la profundidad del pico
+es positiva o negativa? ¿Y dentro de cada especie? (Pista: haz el gráfico con y
+sin `color = species`.) Este fenómeno se conoce como **paradoja de Simpson**.
+:::
+
+```{r}
+#| label: integrador
+#| eval: false
+# Escribe aquí tu código
+
+
+
+```
+
+```{r}
+#| label: sol-integrador
+#| include: !expr params$soluciones
+#| fig-height: 5
+# SOLUCIÓN
+ggplot(pinguinos, aes(x = bill_length_mm, y = bill_depth_mm, color = species)) +
+  geom_point(size = 2, alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~ sex) +
+  labs(title = "Morfología del pico en pingüinos del archipiélago Palmer",
+       x = "Longitud del pico (mm)",
+       y = "Profundidad del pico (mm)",
+       color = "Especie") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+# Paradoja de Simpson: sin agrupar por especie, la tendencia es negativa
+ggplot(pinguinos, aes(x = bill_length_mm, y = bill_depth_mm)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  labs(x = "Longitud del pico (mm)", y = "Profundidad del pico (mm)") +
+  theme_bw()
+```
+
+# Guardar gráficos y cierre (57 – 60 min)
+
+`ggsave()` guarda el **último gráfico** mostrado, o el que indiques con `plot =`:
+
+```{r}
+#| label: guardar
+#| eval: false
+mi_grafico <- ggplot(pinguinos, aes(x = species, y = body_mass_g, fill = species)) +
+  geom_boxplot() +
+  theme_minimal()
+
+ggsave("masa_por_especie.png", plot = mi_grafico,
+       width = 16, height = 10, units = "cm", dpi = 300)
+```
+
+## Resumen
+
+- `ggplot(datos, aes(...))` define los datos y los mapeos.
+- Los `geom_*()` dibujan: `geom_point`, `geom_histogram`, `geom_boxplot`, `geom_bar`, `geom_smooth`...
+- Estéticas **dentro** de `aes()` dependen de una variable; **fuera**, son fijas.
+- `labs()`, `theme_*()`, `scale_*()` y `facet_*()` personalizan el gráfico.
+- Las capas se suman con `+` y un gráfico se puede guardar en un objeto.
+- `ggsave()` exporta el gráfico a un archivo.
+
+## Para seguir aprendiendo
+
+- *R for Data Science* (2ª ed.), capítulo de visualización: <https://r4ds.hadley.nz/>
+- Hoja de referencia de ggplot2: <https://rstudio.github.io/cheatsheets/html/data-visualization.html>
+- Galería de extensiones: <https://exts.ggplot2.tidyverse.org/gallery/>
